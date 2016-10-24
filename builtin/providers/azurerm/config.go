@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/arm/cdn"
 	"github.com/Azure/azure-sdk-for-go/arm/compute"
@@ -17,6 +18,7 @@ import (
 	mainStorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	riviera "github.com/jen20/riviera/azure"
 )
@@ -24,6 +26,8 @@ import (
 // ArmClient contains the handles to all the specific Azure Resource Manager
 // resource classes' respective clients.
 type ArmClient struct {
+	stopCh <-chan struct{} // From the provider
+
 	rivieraClient *riviera.Client
 
 	availSetClient         compute.AvailabilitySetsClient
@@ -439,4 +443,8 @@ func (armClient *ArmClient) getQueueServiceClientForStorageAccount(resourceGroup
 
 	queueClient := storageClient.GetQueueService()
 	return &queueClient, true, nil
+}
+
+func (armClient *ArmClient) CancelCh(max time.Duration) (<-chan struct{}, chan<- struct{}) {
+	return resource.StopCh(armClient.stopCh, max)
 }
